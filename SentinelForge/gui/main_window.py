@@ -15,7 +15,7 @@ class SentinelGUI:
     """Main application window"""
     import tkinter as tk
 from tkinter import scrolledtext
-from .ai.web_search import generate_response
+from SentinelForge.ai.web_search import generate_response
 
 class SentinelGUI:
     def __init__(self, root, config, logger):
