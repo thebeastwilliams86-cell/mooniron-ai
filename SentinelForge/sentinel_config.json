@@ -1,0 +1,17 @@
+{
+  "monitored_folders": [],
+  "scan_interval": 300,
+  "auto_cleanup_threshold_gb": 5.0,
+  "auto_defrag_threshold": 15,
+  "enable_auto_actions": false,
+  "openai_model": "gpt-4o-mini",
+  "max_file_analysis_batch": 50,
+  "mythic_theme": true,
+  "archive_extensions": [
+    ".tmp",
+    ".bak",
+    ".old",
+    ".cache"
+  ],
+  "cleanup_age_days": 30
+}
