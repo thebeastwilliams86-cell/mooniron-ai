@@ -13,6 +13,46 @@ from automation.tasks import AutomationTasks
 
 class SentinelGUI:
     """Main application window"""
+    import tkinter as tk
+from tkinter import scrolledtext
+from SentinelForge.ai.web_search import generate_response
+
+class SentinelGUI:
+    def __init__(self, root, config, logger):
+        self.root = root
+        self.config = config
+        self.logger = logger
+        self.root.title("Moon-Iron System Sentinel")
+
+        # Chat display
+        self.chat_display = scrolledtext.ScrolledText(root, wrap=tk.WORD, width=80, height=20, font=("Courier", 12))
+        self.chat_display.pack(padx=10, pady=10)
+        self.chat_display.insert(tk.END, "🌙 Sentinel: I await your query...\n\n")
+        self.chat_display.config(state=tk.DISABLED)
+
+        # Input box
+        self.input_box = tk.Entry(root, width=80, font=("Courier", 12))
+        self.input_box.pack(padx=10, pady=(0,10))
+        self.input_box.bind("<Return>", lambda event: self.handle_input())
+
+        # Send button
+        self.send_button = tk.Button(root, text="Send", command=self.handle_input)
+        self.send_button.pack(pady=(0,10))
+
+    def handle_input(self):
+        user_input = self.input_box.get()
+        if not user_input.strip():
+            return
+
+        self.chat_display.config(state=tk.NORMAL)
+        self.chat_display.insert(tk.END, f"🧍 You: {user_input}\n")
+        response = generate_response(user_input)
+        self.chat_display.insert(tk.END, f"🌙 Sentinel: {response}\n\n")
+        self.chat_display.config(state=tk.DISABLED)
+        self.chat_display.see(tk.END)
+
+        self.input_box.delete(0, tk.END)
+
     
     def __init__(self, root, config, logger):
         self.root = root
