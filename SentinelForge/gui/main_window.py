@@ -19,20 +19,17 @@ class SentinelGUI:
         self.root.title("Moon-Iron System Sentinel")
         self.root.geometry("900x700")
 
-        # Initialize components
         self.health_monitor = SystemHealthMonitor()
         self.folder_analyzer = FolderAnalyzer(logger)
         self.ai_analyzer = AIFileAnalyzer(logger, config)
         self.automation = AutomationTasks(logger, config)
         self.folder_watcher = None
 
-        # Setup GUI
         self.setup_ui()
         self.update_system_health()
         self.auto_refresh()
 
     def setup_ui(self):
-        """Create the user interface"""
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
@@ -74,7 +71,6 @@ class SentinelGUI:
         user_input = self.input_box.get()
         if not user_input.strip():
             return
-
         self.chat_display.config(state=tk.NORMAL)
         self.chat_display.insert(tk.END, f"🧍 You: {user_input}\n")
         response = generate_response(user_input)
@@ -124,13 +120,15 @@ class SentinelGUI:
 
         archive_frame = ttk.LabelFrame(tab, text="Archive Old Files", padding=10)
         archive_frame.pack(fill=tk.X, padx=10, pady=5)
-
         ttk.Button(archive_frame, text="📦 Archive Files", command=self.archive_files).pack(side=tk.LEFT, padx=5)
 
         ai_frame = ttk.LabelFrame(tab, text="AI Suggestions", padding=10)
         ai_frame.pack(fill=tk.X, padx=10, pady=5)
-
         ttk.Button(ai_frame, text="🧠 Get AI Suggestions", command=self.get_ai_suggestions).pack(side=tk.LEFT, padx=5)
+
+        defrag_frame = ttk.LabelFrame(tab, text="Defragmentation (Placeholder)", padding=10)
+        defrag_frame.pack(fill=tk.X, padx=10, pady=5)
+        ttk.Button(defrag_frame, text="🧩 Run Defragment", command=lambda: self.automation_text.insert(tk.END, "🧩 Defragmentation started...\n")).pack(side=tk.LEFT, padx=5)
 
         results_frame = ttk.LabelFrame(tab, text="Automation Results", padding=10)
         results_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=5)
@@ -138,53 +136,39 @@ class SentinelGUI:
         self.automation_text = scrolledtext.ScrolledText(results_frame, height=10, wrap=tk.WORD)
         self.automation_text.pack(fill=tk.BOTH, expand=True)
 
-    def archive_files(self):
-        selection = self.folder_listbox.curselection()
-        if not selection:
-            messagebox.showwarning("No Selection", "Please select a folder.")
-            return
+    def create_logs_tab(self):
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="📜 Logs")
 
-        folder = self.folder_listbox.get(selection[0])
-        archive_folder = filedialog.askdirectory(title="Select Archive Destination")
-        if archive_folder:
-            analysis = self.folder_analyzer.analyze_folder(folder)
-            if analysis and analysis['old_files']:
-                files_to_archive = [f['path'] for f in analysis['old_files'][:50]]
-                if messagebox.askyesno("Confirm Archive", f"Archive {len(files_to_archive)} old files?"):
-                    results = self.automation.archive_files(files_to_archive, archive_folder, dry_run=False)
-                    self.automation_text.delete(1.0, tk.END)
-                    self.automation_text.insert(tk.END, "📦 ARCHIVE COMPLETE\n\n")
-                    self.automation_text.insert(tk.END, f"Files archived: {results['files_archived']}\n")
-                    self.automation_text.insert(tk.END, f"Total size: {results['total_size_mb']:.1f} MB\n")
+        self.logs_text = scrolledtext.ScrolledText(tab, height=25, wrap=tk.WORD)
+        self.logs_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.update_logs()
 
-    def get_ai_suggestions(self):
-        selection = self.folder_listbox.curselection()
-        if not selection:
-            messagebox.showwarning("No Selection", "Please select a folder.")
-            return
+    def create_config_tab(self):
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text="⚙️ Config")
 
-        folder = self.folder_listbox.get(selection[0])
-        self.automation_text.delete(1.0, tk.END)
-        self.automation_text.insert(tk.END, "🧠 Consulting the AI Oracle...\n\n")
+        frame = ttk.LabelFrame(tab, text="Configuration Settings", padding=10)
+        frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        def get_suggestions():
-            files = []
-            for root, dirs, filenames in os.walk(folder):
-                for filename in filenames[:50]:
-                    files.append(os.path.join(root, filename))
-            results = self.ai_analyzer.analyze_files(files)
-            self.root.after(0, lambda: self.show_ai_suggestions(results))
+        tk.Label(frame, text="Scan Interval (sec):").grid(row=0, column=0, sticky="w")
+        self.scan_interval = tk.Entry(frame, width=10)
+        self.scan_interval.insert(0, str(self.config.get("scan_interval", 60)))
+        self.scan_interval.grid(row=0, column=1)
 
-        threading.Thread(target=get_suggestions, daemon=True).start()
+        tk.Label(frame, text="Cleanup Threshold (GB):").grid(row=1, column=0, sticky="w")
+        self.cleanup_threshold = tk.Entry(frame, width=10)
+        self.cleanup_threshold.insert(0, str(self.config.get("auto_cleanup_threshold_gb", 1.0)))
+        self.cleanup_threshold.grid(row=1, column=1)
 
-    def show_ai_suggestions(self, results):
-        self.automation_text.delete(1.0, tk.END)
-        if "error" in results:
-            self.automation_text.insert(tk.END, f"⚠️ {results['error']}\n")
-        else:
-            self.automation_text.insert(tk.END, "🧠 AI ANALYSIS\n\n")
-            self.automation_text.insert(tk.END, results.get("analysis", "No analysis available."))
+        self.auto_actions_var = tk.BooleanVar(value=self.config.get("enable_auto_actions", False))
+        tk.Checkbutton(frame, text="Enable Auto Actions", variable=self.auto_actions_var).grid(row=2, columnspan=2, sticky="w")
 
-    def update_folder_list(self):
-        self.folder_listbox.delete(0, tk.END)
-        for folder in self.config.get("monitored_f
+        tk.Label(frame, text="OpenAI Model:").grid(row=3, column=0, sticky="w")
+        self.ai_model = tk.Entry(frame, width=20)
+        self.ai_model.insert(0, self.config.get("openai_model", "gpt-4"))
+        self.ai_model.grid(row=3, column=1)
+
+        ttk.Button(frame, text="💾 Save Config", command=self.save_config).grid(row=4, columnspan=2, pady=10)
+
+    def
